@@ -5,7 +5,7 @@ A collection of useful scripts for interacting with the Azure Cloud.
 - ServicePrincipal
     - AddServicePrincipal.ps1: Constructs a service principal, AAD application, and PFX Certificate.
     ``` powershell
-        $securePassword = Convert-ToSecureString "XXXXXXXXXXXXXXXXXX" -AsPlainText -Force
+        $securePassword = ConvertTo-SecureString "XXXXXXXXXXXXXXXXXX" -AsPlainText -Force
         $params = @{
             ApplicationName = "powershell-rest-api"
             Domain = "eigenfunky.com"
