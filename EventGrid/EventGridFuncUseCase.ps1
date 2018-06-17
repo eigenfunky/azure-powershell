@@ -33,6 +33,8 @@ param (
     [string] $FunctionAppService
 )
 
+Import-Module "./Set-ServicePrincipalAppSettings.psm1"
+
 ###############################################################################
 # Global variables
 ###############################################################################
@@ -40,6 +42,8 @@ param (
 $ResourceGroupName = "EventGridFuncRG"
 $Location = "westus2"
 $AppName = "EventGridFuncDemo"
+$VaultName = $AppName + "_Vault"
+$ServicePrincipalName = "powershell_rest-api"
 $SiteName = "https://$AppName.azurewebsites.net"
 $Endpoint = "$SiteName/api/EventGridTest"
 $TemplateUri = "https://raw.githubusercontent.com/eigenfunky/event-grid-func-demo/master/azuredeploy.json"
@@ -56,14 +60,23 @@ $TemplateUri = "https://raw.githubusercontent.com/eigenfunky/event-grid-func-dem
 $resourceGroup = New-AzureRmResourceGroup -Name $ResourceGroupName -Location $Location
 $resourceGroup
 
-# 2. Deploy function app template
-# TODO: This needs to be tested.
+# 2. Deploy function app + key vault template
 $params = @{ 
     ResourceGroupName = $ResourceGroupName 
     TemplateUri       = $TemplateUri
     appName          = $AppName
 }
 New-AzureRmResourceGroupDeployment @params
+# 
+# Manually (ugggggh), navigate to the key vault that was just created and 
+# add the service principal under IAM.
+#
+# Add Service Principal Application Id to key vault
+Set-ServicePrincipalAppSettings -AppName $SiteName -ServicePrincipalName $ServicePrincipalName
+#
+# Manually (ugggggh), get a secret from the service principal through the portal.
+# Now, set that as a secret in the KeyVault that you just created.
+# 
 
 # 3. Create a resource group scoped event subscription
     # a. Should be listening for Microssft.Resource.WriteSuccess
