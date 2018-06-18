@@ -29,12 +29,6 @@
     Contact - eigenfunky@pm.me
 #>
 
-param (
-    [string] $FunctionAppService
-)
-
-Import-Module "./Set-ServicePrincipalAppSettings.psm1"
-
 ###############################################################################
 # Global variables
 ###############################################################################
@@ -43,10 +37,13 @@ $ResourceGroupName = "EventGridFuncRG"
 $Location = "westus2"
 $AppName = "EventGridFuncDemo"
 $VaultName = $AppName + "_Vault"
-$ServicePrincipalName = "powershell_rest-api"
 $SiteName = "https://$AppName.azurewebsites.net"
 $Endpoint = "$SiteName/api/EventGridTest"
 $TemplateUri = "https://raw.githubusercontent.com/eigenfunky/event-grid-func-demo/master/azuredeploy.json"
+$TenantId = (Get-AzureRmContext).TenantId
+$ServicePrincipalName = "powershell_rest-api"
+$ServicePrincipalSecretName = "ServicePrincipalSecret"
+$ServicePrincipalApplicationId = (Get-AzureRmADServicePrincipal -SearchString $ServicePrincipalName).ApplicationId
 
 ###############################################################################
 # Functions
@@ -64,23 +61,35 @@ $resourceGroup
 $params = @{ 
     ResourceGroupName = $ResourceGroupName 
     TemplateUri       = $TemplateUri
-    appName          = $AppName
+    appName           = $AppName
+    vault_name        = $VaultName
 }
 New-AzureRmResourceGroupDeployment @params
 # 
 # Manually (ugggggh), navigate to the key vault that was just created and 
-# add the service principal under IAM.
+# add the function app service principal under IAM.
 #
-# Add Service Principal Application Id to key vault
-Set-ServicePrincipalAppSettings -AppName $SiteName -ServicePrincipalName $ServicePrincipalName
+# Add parameters to app settings
+$params = @{
+    Name        = $AppName
+    AppSettings = @{
+        ServicePrincipalSecretName    = $ServicePrincipalSecretName
+        ServicePrincipalName          = $ServicePrincipalName
+        ServicePrincipalApplicationId = $ServicePrincipalApplicationId
+        VaultName                     = $VaultName
+        TenantId                      = $TenantId
+    }
+}
+Set-AzureWebsite @params
 #
-# Manually (ugggggh), get a secret from the service principal through the portal.
-# Now, set that as a secret in the KeyVault that you just created.
+# Manually (ugggggh), get a secret from the service principal through the portal. 
+# Now, set that as a secret in the KeyVault that you just created. Name the 
+# secret "ServicePrincipalSecret".
 # 
 
 # 3. Create a resource group scoped event subscription
-    # a. Should be listening for Microssft.Resource.WriteSuccess
-    # b. Using the function app endpoint as webhook
+#   a. Should be listening for Microssft.Resource.WriteSuccess
+#   b. Using the function app endpoint as webhook
 $params = @{
     Endpoint              = $Endpoint # need to get this value from above
     EventSubscriptionName = "subscription-network-resource"
